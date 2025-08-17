@@ -2,13 +2,14 @@
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { withBasePath } from '@/lib/basePath';
 
 export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
     // Redirect to the draft page
-    router.push('/draft');
+    router.push(withBasePath('/draft'));
   }, [router]);
 
   return (

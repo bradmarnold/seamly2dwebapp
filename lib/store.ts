@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
+import { isStaticMode } from './basePath';
 
 // Core geometric types
 export interface Point {
@@ -178,9 +179,50 @@ export interface StoreState {
   exportProject: () => string;
   importProject: (data: string) => void;
   newProject: () => void;
+  
+  // Static mode storage helpers
+  saveToLocalStorage: () => void;
+  loadFromLocalStorage: () => void;
 }
 
 const generateId = () => Math.random().toString(36).substr(2, 9);
+
+// Local storage key for static mode
+const STORAGE_KEY = 'seamly2d-project-data';
+
+// Helper to save state to localStorage in static mode
+const saveToStorage = (state: StoreState) => {
+  if (typeof window !== 'undefined' && isStaticMode()) {
+    try {
+      const dataToSave = {
+        points: state.points,
+        segments: state.segments,
+        pieces: state.pieces,
+        blocks: state.blocks,
+        measurements: state.measurements,
+        timestamp: Date.now(),
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(dataToSave));
+    } catch (error) {
+      console.error('Failed to save to localStorage:', error);
+    }
+  }
+};
+
+// Helper to load state from localStorage in static mode
+const loadFromStorage = () => {
+  if (typeof window !== 'undefined' && isStaticMode()) {
+    try {
+      const data = localStorage.getItem(STORAGE_KEY);
+      if (data) {
+        return JSON.parse(data);
+      }
+    } catch (error) {
+      console.error('Failed to load from localStorage:', error);
+    }
+  }
+  return null;
+};
 
 export const useStore = create<StoreState>()(
   immer((set, get) => ({
@@ -212,6 +254,9 @@ export const useStore = create<StoreState>()(
       set((state) => {
         state.points[id] = { ...point, id };
       });
+      // Auto-save in static mode
+      const state = get();
+      saveToStorage(state);
       return id;
     },
     
@@ -221,6 +266,9 @@ export const useStore = create<StoreState>()(
           Object.assign(state.points[id], updates);
         }
       });
+      // Auto-save in static mode
+      const state = get();
+      saveToStorage(state);
     },
     
     deletePoint: (id) => {
@@ -230,6 +278,9 @@ export const useStore = create<StoreState>()(
         state.selectedPoints = state.selectedPoints.filter(pid => pid !== id);
         // TODO: Remove dependent segments and constraints
       });
+      // Auto-save in static mode
+      const state = get();
+      saveToStorage(state);
     },
     
     addSegment: (segment) => {
@@ -237,6 +288,9 @@ export const useStore = create<StoreState>()(
       set((state) => {
         state.segments[id] = { ...segment, id } as Segment;
       });
+      // Auto-save in static mode
+      const state = get();
+      saveToStorage(state);
       return id;
     },
     
@@ -246,6 +300,9 @@ export const useStore = create<StoreState>()(
           Object.assign(state.segments[id], updates);
         }
       });
+      // Auto-save in static mode
+      const state = get();
+      saveToStorage(state);
     },
     
     deleteSegment: (id) => {
@@ -253,6 +310,9 @@ export const useStore = create<StoreState>()(
         delete state.segments[id];
         state.selectedSegments = state.selectedSegments.filter(sid => sid !== id);
       });
+      // Auto-save in static mode
+      const state = get();
+      saveToStorage(state);
     },
     
     addPiece: (piece) => {
@@ -260,6 +320,9 @@ export const useStore = create<StoreState>()(
       set((state) => {
         state.pieces[id] = { ...piece, id };
       });
+      // Auto-save in static mode
+      const state = get();
+      saveToStorage(state);
       return id;
     },
     
@@ -269,6 +332,9 @@ export const useStore = create<StoreState>()(
           Object.assign(state.pieces[id], updates);
         }
       });
+      // Auto-save in static mode
+      const state = get();
+      saveToStorage(state);
     },
     
     deletePiece: (id) => {
@@ -276,6 +342,9 @@ export const useStore = create<StoreState>()(
         delete state.pieces[id];
         state.selectedPieces = state.selectedPieces.filter(pid => pid !== id);
       });
+      // Auto-save in static mode
+      const state = get();
+      saveToStorage(state);
     },
     
     setSelectedPoints: (ids) => {
@@ -306,6 +375,9 @@ export const useStore = create<StoreState>()(
       set((state) => {
         state.measurements = measurements;
       });
+      // Auto-save in static mode
+      const state = get();
+      saveToStorage(state);
     },
     
     undo: () => {
@@ -324,6 +396,8 @@ export const useStore = create<StoreState>()(
         pieces: state.pieces,
         blocks: state.blocks,
         measurements: state.measurements,
+        version: '1.0.0',
+        exported: new Date().toISOString(),
       }, null, 2);
     },
     
@@ -340,6 +414,9 @@ export const useStore = create<StoreState>()(
           state.selectedSegments = [];
           state.selectedPieces = [];
         });
+        // Auto-save in static mode
+        const state = get();
+        saveToStorage(state);
       } catch (error) {
         console.error('Failed to import project:', error);
       }
@@ -357,6 +434,28 @@ export const useStore = create<StoreState>()(
         state.history = [];
         state.historyIndex = -1;
       });
+      // Clear localStorage in static mode
+      if (typeof window !== 'undefined' && isStaticMode()) {
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    },
+    
+    saveToLocalStorage: () => {
+      const state = get();
+      saveToStorage(state);
+    },
+    
+    loadFromLocalStorage: () => {
+      const data = loadFromStorage();
+      if (data) {
+        set((state) => {
+          state.points = data.points || {};
+          state.segments = data.segments || {};
+          state.pieces = data.pieces || {};
+          state.blocks = data.blocks || {};
+          state.measurements = data.measurements || {};
+        });
+      }
     },
   }))
 );
