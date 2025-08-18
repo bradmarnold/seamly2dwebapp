@@ -4,5 +4,5 @@ module.exports = {
   basePath,
   assetPrefix: basePath,
   images: { unoptimized: true },
-  trailingSlash: true,
+  trailingSlash: false,
 };
