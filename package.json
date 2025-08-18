@@ -10,7 +10,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest",
     "e2e": "playwright test",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "build:static": "NEXT_PUBLIC_BASE_PATH=/seamly2dwebapp NEXT_PUBLIC_STATIC_MODE=1 next build && node scripts/make-404.js && touch out/.nojekyll",
+    "deploy": "gh-pages -d out -b gh-pages"
   },
   "dependencies": {
     "react": "^18",
@@ -33,6 +35,7 @@
     "eslint-config-next": "14.2.31",
     "vitest": "^1.0.4",
     "@playwright/test": "^1.40.1",
-    "prettier": "^3.1.0"
+    "prettier": "^3.1.0",
+    "gh-pages": "^6.1.1"
   }
 }

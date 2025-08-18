@@ -2,6 +2,7 @@
 
 import { useStore } from '@/lib/store';
 import { STANDARD_MEASUREMENTS } from '@/lib/measurements';
+import { url } from '@/app/lib/url';
 
 export default function MeasurementsPanel() {
   const { measurements, activeMeasurementFile } = useStore();
@@ -11,7 +12,7 @@ export default function MeasurementsPanel() {
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-lg font-semibold">Measurements</h3>
         <a 
-          href="/measurements"
+          href={url('/measurements')}
           className="btn text-sm"
         >
           Manage Files
@@ -37,7 +38,7 @@ export default function MeasurementsPanel() {
           <div className="text-center text-gray-500 py-8">
             <div className="text-2xl mb-2">📐</div>
             <p className="mb-2">No measurements loaded</p>
-            <a href="/measurements" className="btn-primary text-sm">
+            <a href={url('/measurements')} className="btn-primary text-sm">
               Load Measurements
             </a>
           </div>
