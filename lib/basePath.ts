@@ -6,6 +6,11 @@
 export const BASE_PATH = process.env.NEXT_PUBLIC_BASE_PATH || '';
 
 /**
+ * Simple helper as specified in the problem statement
+ */
+export const withBase = (p: string) => (BASE_PATH ? `${BASE_PATH}${p}` : p);
+
+/**
  * Prefix a path with the base path for use in Link href and router.push
  */
 export function withBasePath(path: string): string {

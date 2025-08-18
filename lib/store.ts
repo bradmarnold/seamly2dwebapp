@@ -9,6 +9,7 @@ export interface Point {
   x: number;
   y: number;
   constraint?: Constraint;
+  lock?: boolean;
 }
 
 export interface Line {
@@ -16,6 +17,7 @@ export interface Line {
   id: string;
   a: string; // point id
   b: string; // point id
+  name?: string;
 }
 
 export interface Arc {
@@ -25,12 +27,14 @@ export interface Arc {
   start: string; // point id
   end: string; // point id
   ccw: boolean;
+  name?: string;
 }
 
 export interface Spline {
   type: 'spline';
   id: string;
   points: string[]; // control point ids
+  name?: string;
 }
 
 export type Segment = Line | Arc | Spline;
@@ -174,6 +178,8 @@ export interface StoreState {
   
   undo: () => void;
   redo: () => void;
+  canUndo: boolean;
+  canRedo: boolean;
   
   // Project management
   exportProject: () => string;
@@ -247,6 +253,17 @@ export const useStore = create<StoreState>()(
     
     history: [],
     historyIndex: -1,
+    
+    // Computed properties
+    get canUndo() {
+      const state = get();
+      return state.historyIndex >= 0;
+    },
+    
+    get canRedo() {
+      const state = get();
+      return state.historyIndex < state.history.length - 1;
+    },
     
     // Actions
     addPoint: (point) => {
