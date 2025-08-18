@@ -224,7 +224,7 @@ function PiecePanel({}: PiecePanelProps) {
                     <div className="space-y-2">
                       {piece.notches.map((notch, index) => (
                         <div key={notch.id} className="flex items-center space-x-2 bg-gray-50 p-2 rounded">
-                          <span className="text-xs">Position: {notch.position.t.toFixed(2)}</span>
+                          <span className="text-xs">Position: {notch.pos.toFixed(2)}</span>
                           <select
                             value={notch.type}
                             className="text-xs border border-gray-300 rounded px-1 py-0.5"

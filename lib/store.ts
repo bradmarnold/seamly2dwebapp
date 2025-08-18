@@ -1,40 +1,29 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
 import { isStaticMode } from './basePath';
+import type { Pt, Seg, Path, Piece, Unit, Measurements } from '../src/geom/types';
 
-// Core geometric types
-export interface Point {
-  id: string;
+// Core geometric types - use the types from geom/types.ts and add compatibility
+export interface Point extends Pt {
   name: string;
-  x: number;
-  y: number;
   constraint?: Constraint;
-  lock?: boolean;
 }
 
-export interface Line {
+export interface Line extends Seg {
   type: 'line';
-  id: string;
-  a: string; // point id
-  b: string; // point id
-  name?: string;
 }
 
-export interface Arc {
+export interface Arc extends Seg {
   type: 'arc';
-  id: string;
-  center: string; // point id
-  start: string; // point id
-  end: string; // point id
-  ccw: boolean;
-  name?: string;
+  center: string; // point id for center - maintain compatibility
+  start: string;  // alias for 'a'
+  end: string;    // alias for 'b'
+  ccw?: boolean;
 }
 
-export interface Spline {
-  type: 'spline';
-  id: string;
-  points: string[]; // control point ids
-  name?: string;
+export interface Spline extends Seg {
+  type: 'bezier';
+  points: string[]; // control point ids - maintain compatibility
 }
 
 export type Segment = Line | Arc | Spline;
@@ -87,20 +76,13 @@ export type Constraint =
   | ParallelConstraint
   | IntersectionConstraint;
 
-// Piece definition
-export interface Piece {
-  id: string;
-  name: string;
+// Piece definition - extend the geom/types.ts Piece with additional properties
+export interface PieceState extends Piece {
   contour: string[]; // segment ids in order
   seamAllowance?: {
     amount: number;
     joins: 'miter' | 'round' | 'bevel';
   };
-  notches: Array<{
-    id: string;
-    position: { segmentId: string; t: number }; // t is parameter along segment
-    type: 'single' | 'double' | 'triangle';
-  }>;
   grainline?: {
     start: { x: number; y: number };
     end: { x: number; y: number };
@@ -130,10 +112,11 @@ export interface Action {
 
 // Main store state
 export interface StoreState {
-  // Core data
+  // Core data - using the types from geom/types.ts
   points: Record<string, Point>;
   segments: Record<string, Segment>;
-  pieces: Record<string, Piece>;
+  paths: Record<string, Path>;
+  pieces: Record<string, PieceState>;
   blocks: Record<string, Block>;
   
   // Current active items
@@ -142,9 +125,12 @@ export interface StoreState {
   selectedSegments: string[];
   selectedPieces: string[];
   
-  // Measurements
-  measurements: Record<string, number>;
+  // Measurements - using the types from geom/types.ts  
+  measurements: Measurements;
   activeMeasurementFile: string | null;
+  
+  // Current drafting unit
+  unit: Unit;
   
   // UI state
   tool: string;
@@ -165,8 +151,12 @@ export interface StoreState {
   updateSegment: (id: string, updates: Partial<Segment>) => void;
   deleteSegment: (id: string) => void;
   
-  addPiece: (piece: Omit<Piece, 'id'>) => string;
-  updatePiece: (id: string, updates: Partial<Piece>) => void;
+  addPath: (path: Omit<Path, 'id'>) => string;
+  updatePath: (id: string, updates: Partial<Path>) => void;
+  deletePath: (id: string) => void;
+  
+  addPiece: (piece: Omit<PieceState, 'id'>) => string;
+  updatePiece: (id: string, updates: Partial<PieceState>) => void;
   deletePiece: (id: string) => void;
   
   setSelectedPoints: (ids: string[]) => void;
@@ -174,7 +164,8 @@ export interface StoreState {
   setSelectedPieces: (ids: string[]) => void;
   
   setTool: (tool: string) => void;
-  setMeasurements: (measurements: Record<string, number>) => void;
+  setMeasurements: (measurements: Measurements) => void;
+  setUnit: (unit: Unit) => void;
   
   undo: () => void;
   redo: () => void;
@@ -235,6 +226,7 @@ export const useStore = create<StoreState>()(
     // Initial state
     points: {},
     segments: {},
+    paths: {},
     pieces: {},
     blocks: {},
     
@@ -245,6 +237,8 @@ export const useStore = create<StoreState>()(
     
     measurements: {},
     activeMeasurementFile: null,
+    
+    unit: 'mm' as Unit,
     
     tool: 'select',
     showGrid: true,
@@ -332,6 +326,38 @@ export const useStore = create<StoreState>()(
       saveToStorage(state);
     },
     
+    addPath: (path) => {
+      const id = generateId();
+      set((state) => {
+        state.paths[id] = { ...path, id };
+      });
+      // Auto-save in static mode
+      const state = get();
+      saveToStorage(state);
+      return id;
+    },
+    
+    updatePath: (id, updates) => {
+      set((state) => {
+        if (state.paths[id]) {
+          Object.assign(state.paths[id], updates);
+        }
+      });
+      // Auto-save in static mode
+      const state = get();
+      saveToStorage(state);
+    },
+    
+    deletePath: (id) => {
+      set((state) => {
+        delete state.paths[id];
+        // TODO: Remove from pieces that reference this path
+      });
+      // Auto-save in static mode
+      const state = get();
+      saveToStorage(state);
+    },
+    
     addPiece: (piece) => {
       const id = generateId();
       set((state) => {
@@ -397,6 +423,15 @@ export const useStore = create<StoreState>()(
       saveToStorage(state);
     },
     
+    setUnit: (unit) => {
+      set((state) => {
+        state.unit = unit;
+      });
+      // Auto-save in static mode
+      const state = get();
+      saveToStorage(state);
+    },
+    
     undo: () => {
       // TODO: Implement undo functionality
     },
@@ -410,9 +445,11 @@ export const useStore = create<StoreState>()(
       return JSON.stringify({
         points: state.points,
         segments: state.segments,
+        paths: state.paths,
         pieces: state.pieces,
         blocks: state.blocks,
         measurements: state.measurements,
+        unit: state.unit,
         version: '1.0.0',
         exported: new Date().toISOString(),
       }, null, 2);
@@ -424,9 +461,11 @@ export const useStore = create<StoreState>()(
         set((state) => {
           state.points = parsed.points || {};
           state.segments = parsed.segments || {};
+          state.paths = parsed.paths || {};
           state.pieces = parsed.pieces || {};
           state.blocks = parsed.blocks || {};
           state.measurements = parsed.measurements || {};
+          state.unit = parsed.unit || 'mm';
           state.selectedPoints = [];
           state.selectedSegments = [];
           state.selectedPieces = [];
@@ -443,6 +482,7 @@ export const useStore = create<StoreState>()(
       set((state) => {
         state.points = {};
         state.segments = {};
+        state.paths = {};
         state.pieces = {};
         state.blocks = {};
         state.selectedPoints = [];
@@ -451,10 +491,9 @@ export const useStore = create<StoreState>()(
         state.history = [];
         state.historyIndex = -1;
       });
-      // Clear localStorage in static mode
-      if (typeof window !== 'undefined' && isStaticMode()) {
-        localStorage.removeItem(STORAGE_KEY);
-      }
+      // Auto-save in static mode
+      const state = get();
+      saveToStorage(state);
     },
     
     saveToLocalStorage: () => {
@@ -468,9 +507,11 @@ export const useStore = create<StoreState>()(
         set((state) => {
           state.points = data.points || {};
           state.segments = data.segments || {};
+          state.paths = data.paths || {};
           state.pieces = data.pieces || {};
           state.blocks = data.blocks || {};
           state.measurements = data.measurements || {};
+          state.unit = data.unit || 'mm';
         });
       }
     },
