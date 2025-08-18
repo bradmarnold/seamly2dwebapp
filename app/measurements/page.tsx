@@ -7,6 +7,8 @@ import {
   loadMeasurementFiles, 
   saveMeasurementFiles, 
   createDefaultMeasurements,
+  parseVitFile,
+  parseVstFile,
   STANDARD_MEASUREMENTS 
 } from '@/lib/measurements';
 import { useStore } from '@/lib/store';
@@ -69,11 +71,18 @@ export default function MeasurementsPage() {
         reader.onload = (e) => {
           const content = e.target?.result as string;
           
-          // TODO: Implement proper .vit/.vst parsing
           try {
-            if (file.name.endsWith('.json')) {
+            let newFile: MeasurementFile;
+            
+            if (file.name.endsWith('.vit')) {
+              newFile = parseVitFile(content);
+              newFile.name = file.name.replace('.vit', '');
+            } else if (file.name.endsWith('.vst')) {
+              newFile = parseVstFile(content);
+              newFile.name = file.name.replace('.vst', '');
+            } else if (file.name.endsWith('.json')) {
               const parsed = JSON.parse(content);
-              const newFile: MeasurementFile = {
+              newFile = {
                 id: Math.random().toString(36).substr(2, 9),
                 name: file.name.replace('.json', ''),
                 type: 'individual',
@@ -82,12 +91,15 @@ export default function MeasurementsPage() {
                 created: new Date().toISOString(),
                 modified: new Date().toISOString(),
               };
-              const updatedFiles = [...files, newFile];
-              setFiles(updatedFiles);
-              saveMeasurementFiles(updatedFiles);
+            } else {
+              throw new Error('Unsupported file format. Please use .vit, .vst, or .json files.');
             }
+            
+            const updatedFiles = [...files, newFile];
+            setFiles(updatedFiles);
+            saveMeasurementFiles(updatedFiles);
           } catch (error) {
-            alert('Failed to import file: ' + error);
+            alert('Failed to import file: ' + (error instanceof Error ? error.message : String(error)));
           }
         };
         reader.readAsText(file);

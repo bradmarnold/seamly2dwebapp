@@ -24,6 +24,7 @@ export default function DraftingCanvas() {
     selectedPoints,
     tool,
     setSelectedPoints,
+    addPoint,
   } = useStore();
 
   // Convert screen coordinates to world coordinates
@@ -105,12 +106,20 @@ export default function DraftingCanvas() {
   const handleCanvasClick = (e: React.MouseEvent) => {
     if (e.button !== 0) return; // Only left click
     
-    // const worldPos = screenToWorld(e.clientX, e.clientY);
+    const worldPos = screenToWorld(e.clientX, e.clientY);
     
     // Close context menu
     setContextMenuPoint(null);
     
     switch (tool) {
+      case 'point_base':
+        // Create a new base point at the click location
+        addPoint({
+          name: `A${Object.keys(points).length + 1}`,
+          x: Math.round(worldPos.x),
+          y: Math.round(worldPos.y),
+        });
+        break;
       case 'point_length_angle':
         setShowLengthAngleDialog(true);
         break;
