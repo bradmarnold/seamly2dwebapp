@@ -34,7 +34,16 @@ export default function MeasurementsPage() {
   const handleSetActive = (file: MeasurementFile) => {
     setMeasurements(file.measurements);
     // Navigate back to draft page
-    router.push('/draft');
+    'use client';
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+
+// keep the rest of your file; add this near where you navigate
+const router = useRouter();
+useEffect(() => {
+  router.replace('/draft/');
+}, [router]);
+
   };
 
   const handleDeleteFile = (fileId: string) => {
