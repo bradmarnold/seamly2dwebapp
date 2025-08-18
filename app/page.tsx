@@ -1,23 +1,21 @@
 'use client';
+import { useEffect, useRef } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { withBasePath } from '@/lib/basePath';
-
-export default function Home() {
+export function SafeRedirectOnce(targetPath?: string) {
   const router = useRouter();
+  const pathname = usePathname();
+  const did = useRef(false);
 
   useEffect(() => {
-    // Redirect to the draft page
-    router.push(withBasePath('/draft'));
-  }, [router]);
+    if (did.current) return;
+    did.current = true;
 
-  return (
-    <div className="min-h-screen bg-primary flex items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold text-primary mb-4">Seamly2D Web App</h1>
-        <p className="text-secondary">Loading...</p>
-      </div>
-    </div>
-  );
+    // Example: normalize trailing slash ONLY if different
+    if (targetPath && pathname !== targetPath) {
+      router.replace(targetPath, { scroll: false });
+    }
+  }, [router, pathname, targetPath]);
+
+  return null;
 }
