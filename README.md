@@ -34,6 +34,29 @@ NEXT_PUBLIC_BASE_PATH=/seamly2dwebapp NEXT_PUBLIC_STATIC_MODE=1 npm run build
 
 This app is configured for deployment to GitHub Pages. See [DEPLOY.md](./DEPLOY.md) for detailed deployment instructions.
 
+### Local Preview
+To preview the app with the same base path as GitHub Pages:
+```bash
+NEXT_PUBLIC_BASE_PATH=/seamly2dwebapp NEXT_PUBLIC_STATIC_MODE=1 npm run dev
+```
+Visit `http://localhost:3000/seamly2dwebapp/`
+
+### Build for Static Export
+To build the app for GitHub Pages deployment:
+```bash
+NEXT_PUBLIC_BASE_PATH=/seamly2dwebapp NEXT_PUBLIC_STATIC_MODE=1 npm run build
+```
+Or use the convenience script:
+```bash
+npm run build:static
+npm run deploy  # Optional: manual deploy
+```
+
+### GitHub Pages Configuration
+1. Go to repository Settings → Pages
+2. Set Source to "GitHub Actions"
+3. The workflow automatically deploys on push to `main` branch
+
 ## Static Mode
 
 When deployed to GitHub Pages, the app runs in "static mode" which:
@@ -42,6 +65,8 @@ When deployed to GitHub Pages, the app runs in "static mode" which:
 - ✅ Provides import/export functionality for JSON files  
 - ✅ Works completely offline after first load
 - ❌ Disables server-side features (auth, database)
+
+**Important:** All data is stored locally in your browser. Use the Import/Export JSON functionality to backup your work!
 
 ## License
 

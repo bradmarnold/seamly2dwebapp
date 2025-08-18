@@ -32,10 +32,16 @@ jobs:
 
       - name: Build application
         env:
-          NEXT_PUBLIC_BASE_PATH: ${{ github.event.repository.name }}
+          NEXT_PUBLIC_BASE_PATH: /seamly2dwebapp
           NEXT_PUBLIC_STATIC_MODE: '1'
         run: |
           npm run build
+
+      - name: Create 404.html fallback
+        run: node scripts/make-404.js
+
+      - name: Add .nojekyll file
+        run: touch out/.nojekyll
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
