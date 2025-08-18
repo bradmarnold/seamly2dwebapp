@@ -7,8 +7,11 @@
 
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
+import { createDefaultLayoutSettings, PAPER_SIZES } from '../../layout/settings';
+import { RectanglePacker } from '../../layout/pack';
+import { exportLayoutToSVG, downloadSVG } from '../../io/exportSvg';
 
-type InspectorTab = 'selection' | 'piece' | 'measurements';
+type InspectorTab = 'selection' | 'piece' | 'measurements' | 'layout';
 
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface SelectionPanelProps {}
@@ -272,6 +275,188 @@ function PiecePanel({}: PiecePanelProps) {
 // eslint-disable-next-line @typescript-eslint/no-empty-object-type
 interface MeasurementsPanelProps {}
 
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+interface LayoutPanelProps {}
+
+function LayoutPanel({}: LayoutPanelProps) {
+  const [layoutSettings, setLayoutSettings] = useState(createDefaultLayoutSettings());
+  const { pieces } = useStore();
+  
+  const handleExportSVG = () => {
+    // Convert pieces to rectangles for layout
+    const rectangles = Object.entries(pieces).map(([id]) => ({
+      id,
+      x: 0,
+      y: 0,
+      width: 100, // Default dimensions - in real app this would come from piece bounds
+      height: 100,
+      rotation: 0,
+    }));
+    
+    const packer = new RectanglePacker(layoutSettings);
+    const layout = packer.pack(rectangles);
+    const svg = exportLayoutToSVG(layout);
+    downloadSVG(svg, 'pattern-layout.svg');
+  };
+  
+  return (
+    <div className="p-4 space-y-4">
+      <h3 className="font-semibold text-sm text-gray-700">Layout</h3>
+      
+      <div className="space-y-3">
+        <div>
+          <label className="block text-xs text-gray-600 mb-1">Paper Format</label>
+          <select
+            value={layoutSettings.paperFormat}
+            onChange={(e) => setLayoutSettings({
+              ...layoutSettings,
+              paperFormat: e.target.value as keyof typeof PAPER_SIZES,
+              paperSize: PAPER_SIZES[e.target.value as keyof typeof PAPER_SIZES]
+            })}
+            className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+          >
+            {Object.keys(PAPER_SIZES).map(format => (
+              <option key={format} value={format}>{format}</option>
+            ))}
+          </select>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">Width (mm)</label>
+            <input
+              type="number"
+              value={layoutSettings.paperSize.width}
+              onChange={(e) => setLayoutSettings({
+                ...layoutSettings,
+                paperSize: { ...layoutSettings.paperSize, width: parseFloat(e.target.value) || 0 }
+              })}
+              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">Height (mm)</label>
+            <input
+              type="number"
+              value={layoutSettings.paperSize.height}
+              onChange={(e) => setLayoutSettings({
+                ...layoutSettings,
+                paperSize: { ...layoutSettings.paperSize, height: parseFloat(e.target.value) || 0 }
+              })}
+              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+            />
+          </div>
+        </div>
+        
+        <div className="grid grid-cols-2 gap-2">
+          <div>
+            <label className="block text-xs text-gray-600 mb-1">Gap Width</label>
+            <input
+              type="number"
+              value={layoutSettings.gapWidth}
+              onChange={(e) => setLayoutSettings({
+                ...layoutSettings,
+                gapWidth: parseFloat(e.target.value) || 0
+              })}
+              className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+            />
+          </div>
+          <div>
+            <label className="flex items-center mt-4">
+              <input
+                type="checkbox"
+                checked={layoutSettings.gapX2}
+                onChange={(e) => setLayoutSettings({
+                  ...layoutSettings,
+                  gapX2: e.target.checked
+                })}
+                className="mr-2"
+              />
+              <span className="text-xs text-gray-600">x2 Gap</span>
+            </label>
+          </div>
+        </div>
+        
+        <div>
+          <label className="block text-xs text-gray-600 mb-1">Arrangement</label>
+          <select
+            value={layoutSettings.arrangementRule}
+            onChange={(e) => setLayoutSettings({
+              ...layoutSettings,
+              arrangementRule: e.target.value as 'three_groups' | 'two_groups' | 'descending_area'
+            })}
+            className="w-full px-2 py-1 border border-gray-300 rounded text-sm"
+          >
+            <option value="descending_area">Descending Area</option>
+            <option value="three_groups">Three Groups</option>
+            <option value="two_groups">Two Groups</option>
+          </select>
+        </div>
+        
+        <div className="space-y-2">
+          <label className="flex items-center">
+            <input
+              type="checkbox"
+              checked={layoutSettings.rotateWorkpiece}
+              onChange={(e) => setLayoutSettings({
+                ...layoutSettings,
+                rotateWorkpiece: e.target.checked
+              })}
+              className="mr-2"
+            />
+            <span className="text-xs text-gray-600">Rotate Workpiece</span>
+          </label>
+          
+          <label className="flex items-center">
+            <input
+              type="checkbox"
+              checked={layoutSettings.showTestSquare}
+              onChange={(e) => setLayoutSettings({
+                ...layoutSettings,
+                showTestSquare: e.target.checked
+              })}
+              className="mr-2"
+            />
+            <span className="text-xs text-gray-600">Show 100mm Test Square</span>
+          </label>
+        </div>
+        
+        <div className="space-y-2 pt-2 border-t">
+          <button
+            onClick={handleExportSVG}
+            className="w-full py-2 px-3 bg-blue-500 text-white text-sm rounded hover:bg-blue-600"
+          >
+            Export SVG
+          </button>
+          
+          <button
+            className="w-full py-1 px-3 bg-gray-500 text-white text-sm rounded hover:bg-gray-600"
+            onClick={() => {
+              // TODO: Implement PDF export
+              alert('PDF export not yet implemented');
+            }}
+          >
+            Export PDF
+          </button>
+          
+          <button
+            className="w-full py-1 px-3 bg-gray-500 text-white text-sm rounded hover:bg-gray-600"
+            onClick={() => {
+              // TODO: Implement DXF export
+              alert('DXF export not yet implemented');
+            }}
+          >
+            Export DXF
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// eslint-disable-next-line @typescript-eslint/no-empty-object-type
+interface MeasurementsPanelProps {}
+
 function MeasurementsPanel({}: MeasurementsPanelProps) {
   const { measurements, activeMeasurementFile } = useStore();
   
@@ -321,6 +506,7 @@ export default function RightInspector() {
     { id: 'selection' as const, label: 'Selection', component: SelectionPanel },
     { id: 'piece' as const, label: 'Piece', component: PiecePanel },
     { id: 'measurements' as const, label: 'Measurements', component: MeasurementsPanel },
+    { id: 'layout' as const, label: 'Layout', component: LayoutPanel },
   ];
 
   return (

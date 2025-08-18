@@ -1,4 +1,5 @@
 import { Parser } from 'expr-eval';
+import { XMLParser } from 'fast-xml-parser';
 
 // Standard measurement names used in pattern drafting
 export const STANDARD_MEASUREMENTS = {
@@ -59,35 +60,97 @@ export interface MeasurementValue {
 }
 
 // Parse .vit file (individual measurements)
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function parseVitFile(_xmlContent: string): MeasurementFile {
-  // TODO: Implement XML parsing using fast-xml-parser
-  // This is a stub implementation
-  return {
-    id: Math.random().toString(36).substr(2, 9),
-    name: 'Parsed VIT File',
-    type: 'individual',
-    units: 'cm',
-    measurements: {},
-    created: new Date().toISOString(),
-    modified: new Date().toISOString(),
-  };
+export function parseVitFile(xmlContent: string): MeasurementFile {
+  const parser = new XMLParser({
+    ignoreAttributes: false,
+    attributeNamePrefix: '@_',
+  });
+  
+  try {
+    const parsed = parser.parse(xmlContent);
+    const vitData = parsed.vit || parsed;
+    
+    const measurements: Record<string, number> = {};
+    
+    // Parse individual measurements
+    if (vitData.measurements?.m) {
+      const measurementList = Array.isArray(vitData.measurements.m) 
+        ? vitData.measurements.m 
+        : [vitData.measurements.m];
+      
+      for (const measurement of measurementList) {
+        const name = measurement['@_name'];
+        const value = parseFloat(measurement['@_value']) || 0;
+        if (name) {
+          measurements[name] = value;
+        }
+      }
+    }
+    
+    // Get units from the file attributes
+    const units = vitData['@_unit'] === 'inch' ? 'in' : 'cm';
+    
+    return {
+      id: Math.random().toString(36).substr(2, 9),
+      name: vitData['@_description'] || vitData['@_name'] || 'Individual Measurements',
+      type: 'individual',
+      units,
+      measurements,
+      description: vitData['@_description'] || '',
+      created: new Date().toISOString(),
+      modified: new Date().toISOString(),
+    };
+  } catch (error) {
+    console.error('Failed to parse VIT file:', error);
+    throw new Error('Invalid VIT file format');
+  }
 }
 
 // Parse .vst file (multisize measurements)
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
-export function parseVstFile(_xmlContent: string): MeasurementFile {
-  // TODO: Implement XML parsing using fast-xml-parser
-  // This is a stub implementation
-  return {
-    id: Math.random().toString(36).substr(2, 9),
-    name: 'Parsed VST File',
-    type: 'multisize',
-    units: 'cm', 
-    measurements: {},
-    created: new Date().toISOString(),
-    modified: new Date().toISOString(),
-  };
+export function parseVstFile(xmlContent: string): MeasurementFile {
+  const parser = new XMLParser({
+    ignoreAttributes: false,
+    attributeNamePrefix: '@_',
+  });
+  
+  try {
+    const parsed = parser.parse(xmlContent);
+    const vstData = parsed.vst || parsed;
+    
+    const measurements: Record<string, number> = {};
+    
+    // Parse multisize measurements - get base size values
+    if (vstData.measurements?.m) {
+      const measurementList = Array.isArray(vstData.measurements.m) 
+        ? vstData.measurements.m 
+        : [vstData.measurements.m];
+      
+      for (const measurement of measurementList) {
+        const name = measurement['@_name'];
+        const baseValue = parseFloat(measurement['@_base']) || 0;
+        if (name) {
+          measurements[name] = baseValue;
+        }
+      }
+    }
+    
+    // Get units from the file attributes
+    const units = vstData['@_unit'] === 'inch' ? 'in' : 'cm';
+    
+    return {
+      id: Math.random().toString(36).substr(2, 9),
+      name: vstData['@_description'] || vstData['@_name'] || 'Multisize Measurements',
+      type: 'multisize',
+      units,
+      measurements,
+      description: vstData['@_description'] || '',
+      created: new Date().toISOString(),
+      modified: new Date().toISOString(),
+    };
+  } catch (error) {
+    console.error('Failed to parse VST file:', error);
+    throw new Error('Invalid VST file format');
+  }
 }
 
 // Evaluate measurement expressions
