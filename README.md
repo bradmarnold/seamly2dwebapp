@@ -13,7 +13,6 @@ A modern web-based port of the open-source Seamly2D pattern drafting application
 - **GitHub Pages deployment with static export**
 - **Auto-save to localStorage in static mode**
 - **Import/Export JSON functionality**
-
 ## Development
 
 ```bash
