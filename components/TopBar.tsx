@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore } from '@/lib/store';
+import { isStaticMode } from '@/lib/basePath';
 
 interface TopBarProps {
   onToggleTheme: () => void;
@@ -11,7 +12,15 @@ interface TopBarProps {
 export default function TopBar({ onToggleTheme, isDarkMode }: TopBarProps) {
   const [showTutorials, setShowTutorials] = useState(false);
   const [showFile, setShowFile] = useState(false);
-  const { exportProject, importProject, newProject } = useStore();
+  const { exportProject, importProject, newProject, loadFromLocalStorage } = useStore();
+  const staticMode = isStaticMode();
+
+  // Load from localStorage on startup in static mode
+  useEffect(() => {
+    if (staticMode) {
+      loadFromLocalStorage();
+    }
+  }, [staticMode, loadFromLocalStorage]);
 
   const handleExport = () => {
     const data = exportProject();
@@ -53,12 +62,16 @@ export default function TopBar({ onToggleTheme, isDarkMode }: TopBarProps) {
     <div className="h-12 bg-primary border-b border-primary flex items-center px-4">
       {/* Brand */}
       <div className="flex items-center space-x-4">
-        <h1 className="text-lg font-semibold text-primary">Seamly2D</h1>
+        <h1 className="text-lg font-semibold text-primary">
+          Seamly2D {staticMode && <span className="text-xs text-secondary">(Static)</span>}
+        </h1>
         
-        {/* Login Button (stub) */}
-        <button className="btn">
-          Login
-        </button>
+        {/* Login Button (disabled in static mode) */}
+        {!staticMode && (
+          <button className="btn">
+            Login
+          </button>
+        )}
       </div>
 
       {/* Navigation */}
@@ -98,7 +111,7 @@ export default function TopBar({ onToggleTheme, isDarkMode }: TopBarProps) {
             File ▼
           </button>
           {showFile && (
-            <div className="absolute top-full left-0 mt-1 bg-primary border border-primary rounded-md shadow-lg z-10 w-32">
+            <div className="absolute top-full left-0 mt-1 bg-primary border border-primary rounded-md shadow-lg z-10 w-40">
               <button
                 className="block w-full text-left px-4 py-2 hover:bg-secondary text-primary"
                 onClick={() => {
@@ -115,7 +128,7 @@ export default function TopBar({ onToggleTheme, isDarkMode }: TopBarProps) {
                   setShowFile(false);
                 }}
               >
-                Open
+                {staticMode ? 'Import JSON' : 'Open'}
               </button>
               <button
                 className="block w-full text-left px-4 py-2 hover:bg-secondary text-primary"
@@ -124,17 +137,19 @@ export default function TopBar({ onToggleTheme, isDarkMode }: TopBarProps) {
                   setShowFile(false);
                 }}
               >
-                Save
+                {staticMode ? 'Export JSON' : 'Save'}
               </button>
-              <button
-                className="block w-full text-left px-4 py-2 hover:bg-secondary text-primary"
-                onClick={() => {
-                  console.log('Export options');
-                  setShowFile(false);
-                }}
-              >
-                Export
-              </button>
+              {!staticMode && (
+                <button
+                  className="block w-full text-left px-4 py-2 hover:bg-secondary text-primary"
+                  onClick={() => {
+                    console.log('Export options');
+                    setShowFile(false);
+                  }}
+                >
+                  Export
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -153,7 +168,7 @@ export default function TopBar({ onToggleTheme, isDarkMode }: TopBarProps) {
       {/* Right side - Status */}
       <div className="ml-auto flex items-center space-x-4">
         <span className="text-sm text-secondary">
-          Ready
+          {staticMode ? 'Static Mode (Auto-save to localStorage)' : 'Ready'}
         </span>
       </div>
     </div>
