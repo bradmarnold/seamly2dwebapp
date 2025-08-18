@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
+import { nanoid } from 'nanoid';
 import { isStaticMode } from './basePath';
 import type { Pt, Seg, Path, Piece, Unit, Measurements } from '../src/geom/types';
 
@@ -121,6 +122,7 @@ export interface StoreState {
   
   // Current active items
   activeBlock: string | null;
+  activePieceId: string | null;
   selectedPoints: string[];
   selectedSegments: string[];
   selectedPieces: string[];
@@ -159,6 +161,10 @@ export interface StoreState {
   updatePiece: (id: string, updates: Partial<PieceState>) => void;
   deletePiece: (id: string) => void;
   
+  createPiece: (name?: string) => string;
+  setActivePiece: (id: string) => void;
+  ensureDefaultPiece: () => void;
+  
   setSelectedPoints: (ids: string[]) => void;
   setSelectedSegments: (ids: string[]) => void;
   setSelectedPieces: (ids: string[]) => void;
@@ -182,7 +188,7 @@ export interface StoreState {
   loadFromLocalStorage: () => void;
 }
 
-const generateId = () => Math.random().toString(36).substr(2, 9);
+const generateId = () => nanoid();
 
 // Local storage key for static mode
 const STORAGE_KEY = 'seamly2d-project-data';
@@ -231,6 +237,7 @@ export const useStore = create<StoreState>()(
     blocks: {},
     
     activeBlock: null,
+    activePieceId: null,
     selectedPoints: [],
     selectedSegments: [],
     selectedPieces: [],
@@ -485,6 +492,7 @@ export const useStore = create<StoreState>()(
         state.paths = {};
         state.pieces = {};
         state.blocks = {};
+        state.activePieceId = null;
         state.selectedPoints = [];
         state.selectedSegments = [];
         state.selectedPieces = [];
@@ -496,6 +504,53 @@ export const useStore = create<StoreState>()(
       saveToStorage(state);
     },
     
+    
+    createPiece: (name = `Piece ${Object.keys(get().pieces).length + 1}`) => {
+      const id = generateId();
+      const piece: PieceState = {
+        id,
+        name,
+        outline: '', // Empty outline initially
+        allowance: 10,
+        notches: [],
+        grain: { angle: 0 },
+        cut: { qty: 1, mirror: false },
+        contour: [],
+        seamAllowance: { amount: 10, joins: 'miter' },
+        labels: []
+      };
+      set((state) => {
+        state.pieces[id] = piece;
+        state.activePieceId = id;
+        state.selectedPieces = [id]; // Also select the piece for the UI
+      });
+      // Auto-save in static mode
+      const state = get();
+      saveToStorage(state);
+      return id;
+    },
+    
+    setActivePiece: (id: string) => {
+      set((state) => {
+        if (state.pieces[id]) {
+          state.activePieceId = id;
+        }
+      });
+    },
+    
+    ensureDefaultPiece: () => {
+      const state = get();
+      const pieceIds = Object.keys(state.pieces);
+      if (pieceIds.length === 0) {
+        get().createPiece('Piece 1');
+      } else if (!state.activePieceId) {
+        set((state) => {
+          state.activePieceId = pieceIds[0];
+          state.selectedPieces = [pieceIds[0]]; // Also select for UI
+        });
+      }
+    },
+
     saveToLocalStorage: () => {
       const state = get();
       saveToStorage(state);
