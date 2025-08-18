@@ -1,8 +1,7 @@
 name: Deploy to GitHub Pages
-
 on:
   push:
-    branches: ['main']
+    branches: [ main ]
   workflow_dispatch:
 
 permissions:
@@ -11,50 +10,32 @@ permissions:
   id-token: write
 
 concurrency:
-  group: 'pages'
-  cancel-in-progress: false
+  group: pages
+  cancel-in-progress: true
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_BASE_PATH: "/${{ github.event.repository.name }}"
+      NEXT_PUBLIC_STATIC_MODE: "1"
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build application
-        env:
-          NEXT_PUBLIC_BASE_PATH: /seamly2dwebapp
-          NEXT_PUBLIC_STATIC_MODE: '1'
-        run: |
-          npm run build
-
-      - name: Create 404.html fallback
-        run: node scripts/make-404.js
-
-      - name: Add .nojekyll file
-        run: touch out/.nojekyll
-
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+          node-version: 20
+      - run: npm ci
+      - run: npm run build
+      - run: mkdir -p out && touch out/.nojekyll
+      - run: cp out/index.html out/404.html || true
+      - uses: actions/upload-pages-artifact@v3
         with:
-          path: ./out
-
+          path: out
   deploy:
     needs: build
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
+      - id: deployment
         uses: actions/deploy-pages@v4
