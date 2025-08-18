@@ -24,7 +24,8 @@ export default function TopBar({ onToggleTheme, isDarkMode }: TopBarProps) {
     undo,
     redo,
     canUndo,
-    canRedo
+    canRedo,
+    createPiece
   } = useStore();
   const staticMode = isStaticMode();
 
@@ -187,7 +188,7 @@ export default function TopBar({ onToggleTheme, isDarkMode }: TopBarProps) {
     { icon: '🔄', label: 'Sync', shortcut: '', action: () => console.log('Sync') },
     { icon: '|', label: '', shortcut: '', action: () => {} }, // separator
     { icon: '📐', label: 'Draft', shortcut: '', action: () => console.log('Draft') },
-    { icon: '🧩', label: 'Piece', shortcut: '', action: () => console.log('Piece') },
+    { icon: '🧩', label: 'New Piece', shortcut: '', action: () => createPiece() },
     { icon: '📋', label: 'Layout', shortcut: '', action: () => console.log('Layout') },
     { icon: '|', label: '', shortcut: '', action: () => {} }, // separator
     { icon: '↶', label: 'Undo', shortcut: 'Ctrl+Z', action: undo, disabled: !canUndo },
